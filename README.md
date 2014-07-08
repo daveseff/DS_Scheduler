@@ -1,5 +1,5 @@
 _______________________________________________________________________________
-                   DS Scheduler
+<h1>                   DS Scheduler</h1>
 _______________________________________________________________________________
 A centralized 'cron' type scheduling system for UNIX/Linux. It has a web 
 interface for managing, monitoring and scheduling jobs and commands in a 
@@ -12,23 +12,23 @@ the running duration and timing of your jobs.
 
 Releases are alavilable in tar.bz2 format:
 
-https://solar1.net/files/scheduler-0.7tar.bz2
+<A href="https://solar1.net/files/scheduler-0.7tar.bz2">scheduler-0.7tar.bz2</a>
 
-Features:
+<h1>Features:</h1>
 
-    Can be used as a drop-in replacement for cron.
-    Can execute jobs based on event triggers.
-    Secure communications between master servers and clients.
-    Cluster-able: Master can automatically fail over to any number of secondary masters. 
-    Ajax web interface for better monitoring and execution feedback.
-    Graphing/Reporting: Visualize the running duration and timing of your jobs.
-    Run Jobs based on File Triggers
-    Database will upgrade itself.
-    Web interface will indicate if the master is running or not.
+ - Can be used as a drop-in replacement for cron.
+ - Can execute jobs based on event triggers.
+ - Secure communications between master servers and clients.
+ - Cluster-able: Master can automatically fail over to any number of secondary masters. 
+ - Ajax web interface for better monitoring and execution feedback.
+ - Graphing/Reporting: Visualize the running duration and timing of your jobs.
+ - Run Jobs based on File Triggers
+ - Database will upgrade itself.
+ - Web interface will indicate if the master is running or not.
 
  
-Installation:
-Requirements:
+<h1>Installation:</h1>
+<h2>Requirements:</h2>
 
  - APSchedler - available at http://packages.python.org/APScheduler
 
@@ -48,11 +48,11 @@ Alias /scheduler/ /opt/scheduler/web/
 
 Secure your site by using SSL and htpasswd. You can run root processes with the scheduler to restricting access is highly recommended.  
 
-Creating an htpasswd file:
+<h3>Creating an htpasswd file:</h3>
 
 htpasswd -c /opt/scheduler/.htpasswd <user>
 
-Contributing
+<h1>Contributing</h1>
 
  - Fork it
  - Create your feature branch (git checkout -b my-new-feature)
