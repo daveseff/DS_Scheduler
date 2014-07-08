@@ -1,0 +1,6 @@
+<?php
+$username="dbuser";
+$password="dbpassword";
+$database="ds-scheduler";
+$dbserver="dbserver";
+?>

@@ -1,0 +1,206 @@
+#!/usr/bin/env python2
+
+import sys, os
+import getopt
+import argparse
+import sched_master as master
+import datetime as dt
+import threading
+import time
+import urwid.curses_display
+import urwid
+from pprint import pprint
+
+os.umask(077)
+
+# Gloals and utilities. 
+util = master.Util()
+quiet = None
+autoconfirm = None
+add = None
+jobname = ''
+jobhost = ''
+jobuser = ''
+jobdep = 0
+jobmode = 0
+jobsched = ''
+jobcomm = ''
+jobcomment = ''
+joblog = ''
+
+
+class bcolors:
+   PINK = '\033[95m'
+   BLUE = '\033[94m'
+   GREEN = '\033[92m'
+   GREY = '\033[91m'
+   YELLOW = '\033[93m'
+   FAIL = '\033[91m'
+   ENDC = '\033[0m'
+
+def usage():
+
+   ''' Help and usage output. '''
+   print '''Usage: sched_admin [OPTIONS]
+
+Options:
+ -h , --help         Print this info.
+ -y , --dontask      Assume yes to all questions. 
+ -q, --quiet         Quiet mode ( good for scripting ).
+ -l, --list          List jobs in the system.
+ -r, --run [ id ]    Run job id immediately.
+ -k, --kill [ id ]   Kill running job.
+ -a, --add [ id ]    Add a new job.
+     --cron <cron notation> --name <name> --host <host> --user <user> --depends [ id ] --mode [ ON_SUCCESS | ON_FAILURE ]
+ -d, --delete [ id ] Delete job completely.
+ -e, --enable [ id ] Enable a disabled job.
+ -x, --disable [ id ] Disable job from running.
+'''
+
+def Log(msg):
+   now = dt.datetime.now()
+   print "%s :: %s" %(now, msg)
+
+def getstatus(status):
+   if status == 0:
+      return bcolors.GREEN + "SUCCESS" + bcolors.ENDC
+   elif status == 99999:
+      return bcolors.YELLOW + "PENDING" + bcolors.ENDC
+   elif status == 99998:
+      return bcolors.BLUE + "RUNNING" + bcolors.ENDC
+   elif status == 99997:
+      return bcolors.PINK + "SUCCESS" + bcolors.ENDC
+   elif status == 99996:
+      return bcolors.FAIL + "KILLED" + bcolors.ENDC
+   else:
+      return bcolors.GREY + "UNKNOWN" + bcolors.ENDC
+
+def getresult(rc):
+   if rc == 0:
+      return bcolors.GREEN + "SUCCESS" + bcolors.ENDC
+   elif rc == 137 or rc == -9:
+      return bcolors.FAIL + "KILLED" + bcolors.ENDC
+   elif rc == 99999:
+      return bcolors.PINK + "UNKNOWN" + bcolors.ENDC
+   else:
+      return bcolors.FAIL + "FAILED" + bcolors.ENDC
+
+def yes_no():
+   if autoconfirm != 1:
+      print "Confirm? [y/N]: "
+      yn = sys.stdin.read(1)
+      if yn == 'y' or yn == 'Y':
+         print "Done."
+         return 1
+      else:
+         print "Canceled."
+         return 0
+   else:
+      return 1
+
+def listjobs():
+   global quiet
+   jobs = util.runQuery("SELECT * FROM jobs")
+   if quiet < 1:
+      print "______________________________________________________________________________________________________________________________________________________________________________________"
+      print " ID  |         NAME              |      HOST       |   USER   |        START        |         END         | DEP |    MODE    |      SCHEDULE        |    LAST    |   STATUS   | PID   "
+      print "______________________________________________________________________________________________________________________________________________________________________________________"
+   for job in jobs:
+      print " %3s | %25s | %15s | %8s | %19s | %19s | %3s | %10s | %20s | %15s | %15s | %5s" % ( job[0], job[1], job[2], job[3], job[4], job[5], job[6], job[7], job[9], getresult(job[11]), getstatus(job[10]), job[16] )
+
+def runjob(job_id):
+   jobname = util.runQuery("SELECT name FROM jobs where id='%s'" % (job_id))[0][0]
+   print " Setting job %s to run :: %s." % (job_id, jobname)
+   if yes_no() == 1:
+      util.runQuery("update jobs set update_flag=1, event_trigger=1, rc=99999 where id='%s'" % (job_id))
+
+def killjob(job_id):
+   jobname = util.runQuery("SELECT name FROM jobs where id='%s'" % (job_id))[0][0]
+   print " Killing job id %s :: %s." % (job_id, jobname)
+   if yes_no() == 1:
+      util.runQuery("update jobs set update_flag=4 where id='%s'" % (job_id))
+
+def addjob(job_args):
+   if yes_no() == 1:
+      util.runQuery("INSERT INTO jobs VALUES ( NULL , '%s', '%s', '%s', NULL , NULL , '%s' , '%s', 0, '%s', 99999 , 99999, '%s', 1, '%s', '%s', '0');" % (
+                    job_args['name'], job_args['host'], job_args['user'], job_args['dep'], job_args['mode'], job_args['sched'], job_args['command'], job_args['comment'], job_args['log']))
+
+def deljob(job_id):
+   jobname = util.runQuery("SELECT name FROM jobs where id='%s'" % (job_id))[0][0]
+   print "Deleting job %s :: %s." % (job_id, jobname)
+   if yes_no() == 1:
+      util.runQuery("UPDATE jobs SET update_flag=2 where id='%s'" % (job_id))
+
+def disablejob(job_id):
+   jobname = util.runQuery("SELECT name FROM jobs where id='%s'" % (job_id))[0][0]
+   print "Disabling job %s :: %s." % (job_id, jobname)
+   if yes_no() == 1:
+      util.runQuery("UPDATE jobs SET update_flag=3 where id='%s'" % (job_id))
+
+def enablejob(job_id):
+   jobname = util.runQuery("SELECT name FROM jobs where id='%s'" % (job_id))[0][0]
+   print "Enabling job %s :: %s." % (job_id, jobname)
+   if yes_no() == 1:
+      util.runQuery("UPDATE jobs SET update_flag=1, rc=99999 where id='%s'" % (job_id))
+
+if __name__ == '__main__':
+   if os.getuid() != 0:
+      print "Root access is required to run this."
+      sys.exit(1)
+
+   try:
+      opts, args = getopt.getopt(sys.argv[1:], "hyqlar:k:d:e:x:", ["help", "dontask", "quiet", "list", "run=", "kill=", "add", "name=", "delete=", "enable=", "disable=", "host=", "user=", "depends=", "mode=", "sched=", "command=", "comment=", "log="])
+   except getopt.GetoptError, err:
+      # print help information and exit:
+      Log(str(err)) # will print something like "option -a not recognized"
+      usage()
+      sys.exit(2)
+   for opt, arg in opts:
+      if opt in ['-h', '--help']:
+         usage()
+      elif opt in ['-y', '--dontask']:
+         autoconfirm = 1
+      elif opt in ['-q', '--quiet']:
+         quiet = 1
+      elif opt in ['-l','--list']:
+         listjobs()
+      elif opt in ['-r','--run']:
+         jobid = arg
+         runjob(jobid)
+      elif opt in ['-k','--kill']:
+         jobid = arg
+         killjob(jobid)
+      elif opt in ['-a','--add']:
+         add = 1
+      elif opt in ['--name']:
+         jobname = arg
+      elif opt in ['--host']:
+         jobhost = arg
+      elif opt in ['--user']:
+         jobuser = arg
+      elif opt in ['--dep']:
+         jobdep = arg
+      elif opt in ['--mode']:
+         jobmode = arg
+      elif opt in ['--sched']:
+         jobsched = arg
+      elif opt in ['--command']:
+         jobcomm = arg
+      elif opt in ['--comment']:
+         jobcomment = arg
+      elif opt in ['--log']:
+         joblog = arg
+      elif opt in ['-d','--delete']:
+         jobid = arg
+         deljob(jobid)
+      elif opt in ['-e','--enable']:
+         jobid = arg
+         enablejob(jobid)
+      elif opt in ['-x','--disable']:
+         jobid = arg
+         disablejob(jobid)
+      else:
+         usage()
+   if add == 1:
+      addjob({'name':jobname, 'host': jobhost, 'user': jobuser, 'dep':jobdep, 'mode':jobmode, 'sched':jobsched, 'command':jobcomm, 'comment':jobcomment, 'log':joblog})
+

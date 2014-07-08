@@ -1,0 +1,40 @@
+####################################################################
+# Scheduler configuration
+####################################################################
+# Database
+dbconfig = {
+         'dbhost' : 'localhost',
+         'dbuser' : 'ds-scheduler',
+         'dbpass' : 'dbpassword',
+         'dbname' : 'ds-scheduler',
+         }
+
+#Scheduler 
+config = {
+#            'apscheduler.jobstores.file.class': 'apscheduler.jobstores.shelve_store:ShelveJobStore',
+#            'apscheduler.jobstores.file.path': '/tmp/dbfile'
+         }
+
+agent_port = 999
+event_port = 998
+
+#Clustering
+clustering = False
+PORT = 43278; CHECK_PERIOD = 5; CHECK_TIMEOUT = 3
+#         Remote Peer
+peers = { '192.168.50.4':             '',
+          '192.168.50.3':             '', }
+
+# Preferred master MUST mastch on all scheduler masters else bad things happen. 
+preferred_master = '192.168.50.4'
+
+#Crypto / host key This has to match the slaves
+secret_key = "yourrandomstringhere"
+
+# Command to run when job fail
+# possible to set 2 parameters : job name and return code
+# with command_jobfail = "/path/to/script \'%s\' \'%s\'"
+#command_jobfail = "/path/to/script"
+
+####################################################################
+####################################################################

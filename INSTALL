@@ -1,0 +1,33 @@
+ Installation:
+Requirements:
+
+APSchedler - available HERE
+
+Apache Web server
+
+Python >= 2.6
+
+Point your web server to the 'web' directory that is under scheduler/.  If you installed in /opt/scheduler, then an example apache entry would be:
+
+Alias /scheduler/ /opt/scheduler/web/
+<Directory /opt/scheduler/web/>
+   AuthType Basic
+   AuthName "DS_SChed"
+   AuthUserFile /opt/scheduler/.htpasswd
+   require valid-user
+</Directory>
+
+Secure your site by using SSL and htpasswd. You can run root processes with the scheduler to restricting access is highly recommended.
+
+Creating an htpasswd file:
+
+htpasswd -c /opt/scheduler/.htpasswd <user>
+
+ Create the Database
+
+Create a mysql user and a blank DB called "ds-scheduler" in MySQL. Make sure to update the sched_config.py and the dbconfig.php files to reflect the database user, host, and passwd.
+
+Note for version 0.5 and later:
+
+The sched_master application will create and upgrade the database tables. The goal here it to avoid doing any DB maintenance to allow for very easy upgrades.
+

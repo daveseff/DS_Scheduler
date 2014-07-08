@@ -1,0 +1,295 @@
+#!/usr/bin/env python2 
+
+import sched_master as master
+import os
+import time
+import curses
+import threading
+
+os.umask(077)
+
+killflag = 0
+pauseflag = 0
+x = None
+util = master.Util()
+screen = curses.initscr()
+curses.start_color()
+
+curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_BLACK)
+curses.init_pair(2, curses.COLOR_GREEN, curses.COLOR_BLACK)
+curses.init_pair(3, curses.COLOR_RED, curses.COLOR_BLACK)
+curses.init_pair(4, curses.COLOR_BLUE, curses.COLOR_BLACK)
+curses.init_pair(5, curses.COLOR_CYAN, curses.COLOR_BLACK)
+screen.bkgd(' ', curses.color_pair(1))
+
+class MainThread (threading.Thread):
+   def run(self):
+      global killflag
+      global pauseflag
+      while killflag == 0:
+         while pauseflag == 1:
+            screen.addstr(1,1, "Resuming...")
+            time.sleep(1)
+         jobs = util.runQuery("SELECT * FROM jobs")
+         screen.clear()
+         screen.border(0)
+         screen.addstr(1,1, " ID  |         NAME              |      HOST       |   USER   |        START        |         END         | DEP |    MODE    |      SCHEDULE        |    LAST    |   STATUS   | PID")
+         #screen.hline(1, 1, "_", 189)
+         i = 2
+         for job in jobs:
+            screen.addstr(i, 1, " %3s " % (job[0]))
+            screen.addstr("|")
+            screen.addstr(" %25s " % (job[1]))
+            screen.addstr("|")
+            screen.addstr(" %15s " % (job[2]))
+            screen.addstr("|")
+            screen.addstr(" %8s " % (job[3]))
+            screen.addstr("|")
+            screen.addstr(" %19s " % (job[4]))
+            screen.addstr("|")
+            screen.addstr(" %19s " % (job[5]))
+            screen.addstr("|")
+            screen.addstr(" %3s " % (job[6]))
+            screen.addstr("|")
+            screen.addstr(" %10s " % (job[7]))
+            screen.addstr("|")
+            screen.addstr(" %20s " % (job[9]))
+            screen.addstr("|")
+            screen.addstr(" %10s " % (getresult(job[11])), curses.color_pair(getcolor(job[11])))
+            screen.addstr("|")
+            screen.addstr(" %10s " % (getstatus(job[10])), curses.color_pair(getcolor(job[10])))
+            screen.addstr("|")
+            screen.addstr(" %5s" % (job[16]))
+            i = i + 1
+         screen.refresh()
+         time.sleep(1)
+      print "Bye!"
+
+def getstatus(status):
+   if status == 0:
+      return "SUCCESS"
+   elif status == 99999:
+      return "PENDING"
+   elif status == 99998:
+      return "RUNNING"
+   elif status == 99997:
+      return "DISABLED"
+   elif status == 99996:
+      return "KILLING"
+   else:
+      return "UNKNOWN"
+
+def getresult(rc):
+   if rc == 0:
+      return "SUCCESS"
+   elif rc == 137 or rc == -9:
+      return "KILLED"
+   elif rc == 99999:
+      return "UNKNOWN"
+   else:
+      return "FAILED"
+
+def getcolor(code):
+   if code == 0:
+      return 2
+   elif code == 99999:
+      return 5
+   elif code == 99998:
+      return 4
+   elif code > 0 and code < 9999:
+      return 3
+   else:
+      return 1
+
+def show_help():
+   global pauseflag
+   legend = curses.newwin(16, 30, 10, 10)
+   legend.border(0)
+   legend.addstr(1,1, "Help and Key Commands:")
+   legend.addstr(3,1, "h: Show this help screen.")
+   legend.addstr(4,1, "s: Show job details.")
+   legend.addstr(5,1, "r: Run job immidiately.")
+   legend.addstr(6,1, "k; Kill running job.")
+   legend.addstr(7,1, "a: Add new job.")
+   legend.addstr(8,1, "d: Delete job. ")
+   legend.addstr(9,1, "x: Disable job. ")
+   legend.addstr(10,1, "d: Enable a disabled job. ")
+   legend.addstr(11,1, "z: Reset a job. ")
+   legend.addstr(12,1, "q: Quit.")
+   legend.addstr(15,5, "Press any key to close.")
+   legend.refresh()
+   a = legend.getch()
+   pauseflag = 0
+  
+def show_job_detail(job_id):
+   global pauseflag
+   job = util.runQuery("SELECT * FROM jobs WHERE id=%s" % (job_id))[0]
+   legend = curses.newwin(20, 60, 10, 10)
+   legend.border(0)
+   legend.addstr(1,1, "Job %s:" %(job_id))
+   legend.addstr(3,1, "Name: %s" % (job[1]))
+   legend.addstr(4,1, "Host: %s" % (job[2]))
+   legend.addstr(5,1, "User: %s" % (job[3]))
+   legend.addstr(6,1, "Depends on Job: %s" % (job[6]))
+   legend.addstr(7,1, "Depend mode: %s" % (job[7]))
+   legend.addstr(8,1, "Schedule: %s" % (job[9]))
+   legend.addstr(9,1, "Command: %s" % (job[12]))
+   legend.addstr(10,1, "Comment: %s" % (job[14]))
+   legend.addstr(11,1, "Log retention in days: %s" % (job[15]))
+   legend.addstr(15,5, "Press any key to close.")
+   legend.refresh()
+   a = legend.getch()
+   pauseflag = 0
+  
+def show_job():
+   dialog = curses.newwin(5, 30, 12, 12)
+   dialog.border(0)
+   dialog.addstr(1, 1, "Job (id): ")
+   job_id = dialog.getstr(4)
+   if job_id > 0:
+      show_job_detail(job_id)
+
+def yes_no():
+   global pauseflag
+   dialog = curses.newwin(5, 30, 30, 30)
+   dialog.border(0)
+   dialog.addstr(1, 1, "Are you sure (y/n): ")
+   yn = dialog.getch()
+   if yn == ord('y'):
+      return 1
+   else:
+      return 0
+ 
+def run_job():
+   global pauseflag
+   dialog = curses.newwin(5, 30, 12, 12)
+   dialog.border(0)
+   dialog.addstr(1, 1, "Run Job (id): ")
+   job_id = dialog.getstr(4)
+   if yes_no() == 1:
+      util.runQuery("UPDATE jobs SET update_flag=1, event_trigger=1, rc=99999 where id=%s" % (job_id))
+   pauseflag = 0
+
+def kill_job():
+   global pauseflag
+   dialog = curses.newwin(5, 30, 12, 12)
+   dialog.border(0)
+   dialog.addstr(1, 1, "Kill Job (id): ")
+   job_id = dialog.getstr(4)
+   if yes_no() == 1:
+      util.runQuery("UPDATE jobs SET update_flag=4 where id=%s" % (job_id))
+   pauseflag = 0
+
+def add_job():
+   global pauseflag
+   dialog = curses.newwin(20, 120, 10, 5)
+   dialog.border(0)
+   dialog.addstr(1,1, "Name: ")
+   dialog.addstr(2,1, "Host: ")
+   dialog.addstr(3,1, "User: ")
+   dialog.addstr(4,1, "Depends on Job: ")
+   dialog.addstr(5,1, "Depend mode: ")
+   dialog.addstr(6,1, "Schedule: ")
+   dialog.addstr(7,1, "Command: ")
+   dialog.addstr(8,1, "Comment: ")
+   dialog.addstr(9,1, "Log retention in days: ")
+   name = dialog.getstr(1, 7, 80)
+   host = dialog.getstr(2, 7, 80)
+   user = dialog.getstr(3, 7, 16)
+   dep = dialog.getstr(4, 17, 4)
+   dmode = dialog.getstr(5, 14, 80)
+   cron = dialog.getstr(6, 11, 25)
+   comm = dialog.getstr(7, 10, 80)
+   comment = dialog.getstr(8, 10, 80)
+   logdays = dialog.getstr(9, 24, 4)
+   if yes_no() == 1:
+      util.runQuery("INSERT INTO jobs VALUES ( NULL , '%s', '%s', '%s', NULL , NULL , '%s' , '%s', 0, '%s', 99999 , 99999, '%s', 1, '%s', '%s', '');" % (name, host, user, dep, dmode, cron, comm, comment, logdays))
+      #INSERT INTO jobs VALUES ( NULL , '${name}', '${host}', '${user}', '${start_time}' , '${end}' , '${depends}' , '${depmode}', 0, '${cron}', 99999 , 99999, '${command}', 1, '${comment}', '${log_ret}', '');
+   pauseflag = 0
+
+def delete_job():
+   global pauseflag
+   dialog = curses.newwin(5, 30, 12, 12)
+   dialog.border(0)
+   dialog.addstr(1, 1, "Delete Job (id): ")
+   job_id = dialog.getstr(4)
+   if yes_no() == 1:
+      util.runQuery("UPDATE jobs SET update_flag=2 id=%s" % (job_id))
+   pauseflag = 0
+
+def enable_job():
+   global pauseflag
+   dialog = curses.newwin(5, 30, 12, 12)
+   dialog.border(0)
+   dialog.addstr(1, 1, "Enable Job (id): ")
+   job_id = dialog.getstr(4)
+   if yes_no() == 1:
+      util.runQuery("UPDATE jobs SET update_flag=1, rc=99999 where id=%s" % (job_id))
+   pauseflag = 0
+
+def disable_job():
+   global pauseflag
+   dialog = curses.newwin(5, 30, 12, 12)
+   dialog.border(0)
+   dialog.addstr(1, 1, "Disable Job (id): ")
+   job_id = dialog.getstr(4)
+   if yes_no() == 1:
+      util.runQuery("UPDATE jobs SET update_flag=3 where id=%s" % (job_id))
+   pauseflag = 0
+
+def reset_job():
+   global pauseflag
+   dialog = curses.newwin(5, 30, 12, 12)
+   dialog.border(0)
+   dialog.addstr(1, 1, "Reset Job (id): ")
+   job_id = dialog.getstr(4)
+   if yes_no() == 1:
+      util.runQuery("UPDATE jobs SET update_flag=1, event_trigger=0, start_time=NULL, end_time=NULL, rc=99999 where id=%s" % (job_id))
+   pauseflag = 0
+
+T = MainThread()
+T.start()
+
+while x != ord('q'):
+   x = screen.getch()
+
+   if x == ord('h'):
+      pauseflag = 1
+      show_help()
+
+   if x == ord('r'):
+      pauseflag = 1
+      run_job()
+
+   if x == ord('k'):
+      pauseflag = 1
+      kill_job()
+
+   if x == ord('a'):
+      pauseflag = 1
+      add_job()
+
+   if x == ord('d'):
+      pauseflag = 1
+      delete_job()
+
+   if x == ord('x'):
+      pauseflag = 1
+      disable_job()
+
+   if x == ord('e'):
+      pauseflag = 1
+      enable_job()
+
+   if x == ord('s'):
+      pauseflag = 1
+      show_job()
+
+   if x == ord('z'):
+      pauseflag = 1
+      reset_job()
+
+killflag = 1
+curses.endwin()
+
+
