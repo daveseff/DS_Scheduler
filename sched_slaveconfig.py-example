@@ -1,0 +1,24 @@
+####################################################################
+# Scheduler configuration
+####################################################################
+import os
+
+# This is where your installation should live. Point this to where ever
+# You decide to move it to.
+sched_basedir = '/opt/scheduler'
+
+# SSL info. Should not need to change these
+ssl_dir = os.path.join(sched_basedir, 'ssl')
+master_certs = os.path.join(ssl_dir, 'master')
+agent_certfile = 'slave.pem'
+agent_keyfile  = 'slave.key'
+
+# Ports to communicate on
+agent_port = 999
+event_port = 998 # This is the port that talks back to the master.
+bind_address = '0.0.0.0'
+# The hostname of the sched_master.
+master_host = 'localhost'
+####################################################################
+####################################################################
+

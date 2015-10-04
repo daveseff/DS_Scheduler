@@ -28,8 +28,19 @@ peers = { '192.168.50.4':             '',
 # Preferred master MUST mastch on all scheduler masters else bad things happen. 
 preferred_master = '192.168.50.4'
 
-#Crypto / host key This has to match the slaves
-secret_key = "yourrandomstringhere"
+# This is where your installation should live. Point this to where ever
+# You decide to move it to. 
+sched_basedir = '/opt/scheduler'
+
+# SSL info. Should not need to change these
+ssl_dir = os.path.join(sched_basedir, 'ssl')
+# Agent Cert dir.
+agent_certs = os.path.join(sched_basedir, 'ssl/agents')
+master_certfile = 'master.pem'
+master_keyfile  = 'master.key'
+
+# Logging
+logfile = '/var/log/DSscheduler.log'
 
 # Command to run when job fail
 # possible to set 2 parameters : job name and return code

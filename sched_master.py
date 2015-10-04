@@ -1,7 +1,7 @@
 #!/usr/bin/env python2
 
 import sys, os
-import socket, threading, time
+import socket, ssl, threading, time
 import SocketServer
 import string
 import random
@@ -12,16 +12,16 @@ from datetime import datetime, timedelta
 from apscheduler.scheduler import Scheduler
 from email.mime.text import MIMEText
 import MySQLdb
-import SimpleCrypt as sc
 import sched_config as conf
 from pprint import pprint
+from OpenSSL import crypto, SSL
 
 #Global defs
 logging.basicConfig()
-incrypt = sc.SimpleCrypt(INITKEY=conf.secret_key, DEBUG=False, CYCLES=3, BLOCK_SZ=25, KEY_ADV=5, KEY_MAGNITUDE=1)
-outcrypt = sc.SimpleCrypt(INITKEY=conf.secret_key, DEBUG=False, CYCLES=3, BLOCK_SZ=25, KEY_ADV=5, KEY_MAGNITUDE=1)
 myself = socket.gethostbyname(socket.gethostname())
 lock = threading.Lock()
+C_F = os.path.join(conf.ssl_dir, conf.master_certfile)
+K_F = os.path.join(conf.ssl_dir, conf.master_keyfile)
 
 def id_generator(size=32, chars=string.ascii_uppercase + string.digits):
    return ''.join(random.choice(chars) for x in range(size))
@@ -34,6 +34,51 @@ def Log(msg):
    if __name__ == "__main__":
       now = dt.datetime.now()
       print "%s :: %s" %(now, msg)
+
+def create_self_signed_cert(keyfile, certfile):
+   # create a key pair
+   k = crypto.PKey()
+   k.generate_key(crypto.TYPE_RSA, 4096)
+
+   # create a self-signed cert
+   cert = crypto.X509()
+   cert.get_subject().C = "AU"
+   cert.get_subject().ST = "QLD"
+   cert.get_subject().L = "Brisbane"
+   cert.get_subject().O = "DS_Schedule Master"
+   cert.get_subject().OU = "DS_Schedule Master"
+   cert.get_subject().CN = socket.gethostname()
+   cert.set_serial_number(1000)
+   cert.gmtime_adj_notBefore(0)
+   cert.gmtime_adj_notAfter(10*365*24*60*60)
+   cert.set_issuer(cert.get_subject())
+   cert.set_pubkey(k)
+   cert.sign(k, 'sha256')
+
+   open(certfile, "wt").write(crypto.dump_certificate(crypto.FILETYPE_PEM, cert))
+   open(keyfile, "wt").write(crypto.dump_privatekey(crypto.FILETYPE_PEM, k))
+
+class SecureTCPServer(SocketServer.TCPServer):
+    def __init__(self,
+                 server_address,
+                 RequestHandlerClass,
+                 certfile,
+                 keyfile,
+                 bind_and_activate=True):
+        SocketServer.ThreadingTCPServer.allow_reuse_address = True
+        SocketServer.TCPServer.__init__(self, server_address, RequestHandlerClass, bind_and_activate)
+        self.certfile = certfile
+        self.keyfile = keyfile
+
+    def get_request(self):
+        newsocket, fromaddr = self.socket.accept()
+        connstream = ssl.wrap_socket(newsocket,
+                                 server_side=True,
+                                 certfile = self.certfile,
+                                 keyfile = self.keyfile)
+        return connstream, fromaddr
+
+class Secure_ThreadingTCPServer(SocketServer.ThreadingMixIn, SecureTCPServer): pass
 
 class Heartbeats(dict):
    """Manage shared heartbeats dictionary with thread locking"""
@@ -105,8 +150,8 @@ class Event_Receiver(SocketServer.BaseRequestHandler):
 
    def handle(self):
       util = Util()
-      cipher = self.request.recv(1024)
-      event = cPickle.loads(incrypt.Decrypt(cipher))
+      ev_in = self.connection.recv(1024)
+      event = cPickle.loads(ev_in)
       e_type = event[0]
       host = event[1]
       path = event[2]
@@ -116,11 +161,11 @@ class Event_Receiver(SocketServer.BaseRequestHandler):
 
 class EventEngine(threading.Thread):
    def run(self):
+      global C_F
+      global K_F
       #This 'event_engine' is for the remote trigger events.
-      SocketServer.ThreadingTCPServer.allow_reuse_address = True
-      server = SocketServer.ThreadingTCPServer(('', conf.event_port), Event_Receiver)
+      server = Secure_ThreadingTCPServer(('', conf.event_port), Event_Receiver, C_F, K_F)
       # Start a thread with the server -- that thread will then start one more thread for each request
-      #server_thread = threading.Thread(target=server.serve_forever)
       Log("Started Event engine.")
       server.serve_forever()
 
@@ -173,8 +218,8 @@ class Util:
       return result
 
    def init_path(self):
-      if not os.path.isfile('/var/log/scheduler_web.log'):
-         os.system('touch /var/log/scheduler_web.log')
+      if not os.path.isfile(conf.logfile):
+         os.system('touch %s' % (conf.logfile))
 
    def init_DB(self):
       current_db_version = 4
@@ -230,28 +275,44 @@ class Util:
          # Previous job is still running. We should try to kill it. 
          # TODO: Send an alert
          cmd = 'kill -9 %s' % (run_status[1])
+
+      #If the agent cert doesn't exist yet retreive it. Otherwise reject it as this may be a rouge connection
+      agent_certfile = os.path.join(conf.agent_certs, '%s.pem' % (host))
+      if not os.path.exists(agent_certfile):
+         Log("Missing cert for %s, retrieveing cert." % (host))
+         servercert = ssl.get_server_certificate((host, conf.agent_port))
+         if servercert:
+            e = open(agent_certfile, 'w')
+            e.write(servercert)
+            e.close()
+         else:
+            # We failed to get the agent SSL cert, so bail.
+            Log("Cert verification failed for %s:" % (host))
+            self.runQuery("update jobs set end_time=now(), rc=99994, status=99994 where id='%s'" % (job_id)) # Error
+            self.runErrorCommand(job_name, 99994)
+            return None
+
       unique_id = id_generator()
       if cmd.startswith('kill'):
          Log("Killing job %s on host %s" % (job_name, host))
       else:
          Log("Running job %s on host %s" % (job_name, host))
       client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+      ssl_socket = ssl.wrap_socket(client_socket, ca_certs=agent_certfile, cert_reqs=ssl.CERT_REQUIRED)
       try:
-         client_socket.connect((host, conf.agent_port))
+         ssl_socket.connect((host, conf.agent_port))
       except:
-         #[Errno 113] No route to host or agent is offline. Let's flag that. 
+         #[Errno 113] No route to host or agent is offline. Let's flag that.
          Log("Job %s Failed:" % (job_id))
          self.runQuery("update jobs set end_time=now(), rc=99994, status=99994 where id='%s'" % (job_id)) # Error
          self.runErrorCommand(job_name, 99994)
          return None
       command = cPickle.dumps([cmd, user])
-      cipher = outcrypt.Encrypt(command)
-      client_socket.send(cipher)
+      ssl_socket.send(command)
       if cmd.startswith('ON_'):
          return None
       # Lets get the PID so that we can manage the process.
-      rawcipher = client_socket.recv(10240)
-      rawdata = incrypt.Decrypt(rawcipher)
+      rawdata = ssl_socket.recv(10240)
       try:
          data = cPickle.loads(rawdata)
       except UnpicklingError:
@@ -263,9 +324,8 @@ class Util:
          self.runQuery("update jobs set start_time=now(),status=99998, pid=%s where id=%s" % (pid, job_id))
          self.runQuery("insert into results VALUES(%s, now(), NULL, NULL, '%s', 99999)" % (job_id, unique_id))
 
-      rawcipher = client_socket.recv(10240)
-      rawdata = incrypt.Decrypt(rawcipher)
-     
+      rawdata = ssl_socket.recv(10240)
+
       try:
          data = cPickle.loads(rawdata)
       except UnpicklingError:
@@ -273,7 +333,7 @@ class Util:
       finally:
          rc = data[0]
 
-      if not cmd.startswith('kill'): 
+      if not cmd.startswith('kill'):
          Log("Job id %s returned with %s" % (job_id, rc))
          output=fix_quotes(data[1])
          if rc > 0:
@@ -295,7 +355,7 @@ class Util:
          # wake up any job that depends on the current one finishing
          self.runQuery("update jobs set update_flag=1 where depends='%s'" % (job_id))
          return data
-      # We have attempted a kill command, we may have to handle it here if the parent connection died. 
+      # We have attempted a kill command, we may have to handle it here if the parent connection died.
       else:
          if rc == 0:
             pass
@@ -312,7 +372,7 @@ class Util:
       self.runQuery("update jobs set update_flag=1, rc=99999, status=99999 where id='%s'" % (job_id))
 
    def reset_all(self):
-      # Set all flags for the first timeDA or on failover. 
+      # Set all flags for the first timeDA or on failover.
       Log("Setting update flags")
       self.runQuery("update jobs set update_flag=1, event_trigger=0, rc=99999, status=99999, pid=0 where status != 99997")
       self.runQuery("update event_table set update_flag=1, condition_met=0")
@@ -408,7 +468,7 @@ class DS_Scheduler:
                      Log("Refreshing job %s" %(job_name))
                   except(KeyError):
                      pass
- 
+
                   # DEP SECTION
                   if j_etrigger > 0: # Event trigger
                      # immediate jobs like event jobs and run_now jobs need not collide with the namespace
@@ -431,15 +491,15 @@ class DS_Scheduler:
                      self.util.runQuery("update jobs set update_flag=0 where id='%s'" % (j_id))
                   if j_etrigger == 0 and j_dep == 0:  #Standard "cron" type scheduling
                      crontab = j_cron.split()
-                     # Job Names need to be unique, so the same 'job' being run on different hosts can work. 
-                     current_job = self.sched.add_cron_job(self.util.remote_command, 
-                                                          minute=crontab[0], 
-                                                          hour=crontab[1], 
-                                                          day=crontab[2], 
-                                                          month=crontab[3], 
+                     # Job Names need to be unique, so the same 'job' being run on different hosts can work.
+                     current_job = self.sched.add_cron_job(self.util.remote_command,
+                                                          minute=crontab[0],
+                                                          hour=crontab[1],
+                                                          day=crontab[2],
+                                                          month=crontab[3],
                                                           day_of_week=crontab[4],
-                                                          name=job_name, 
-                                                          args=(j_id, j_host, j_command, j_user, job_name), 
+                                                          name=job_name,
+                                                          args=(j_id, j_host, j_command, j_user, job_name),
                                                           max_instances=2)
 
                      # Add the job to the queue
@@ -471,7 +531,7 @@ class DS_Scheduler:
             #pprint(self.queue)
             time.sleep(conf.CHECK_PERIOD)
          else:
-            # Unscheduling all jobs so that the peer node can take over. 
+            # Unscheduling all jobs so that the peer node can take over.
             if idle == False:
                jobs = self.util.refresh_jobs()
                for j in jobs.keys():
@@ -485,7 +545,20 @@ class DS_Scheduler:
 
       self.sched.shutdown()
 
-if __name__ == "__main__":
+def main():
+   global C_F
+   global K_F
+
+   # Generate a cert for the master if we do not have one yet.
+   if not os.path.exists(conf.ssl_dir):
+      os.mkdir(conf.ssl_dir, 0700)
+   # Make the dir for the agent certs.
+   if not os.path.exists(conf.agent_certs):
+      os.mkdir(conf.agent_certs)
+
+   if not os.path.exists(C_F) or not os.path.exists(K_F):
+      create_self_signed_cert(K_F, C_F)
+
    os.umask(077)
    if conf.clustering == True:
       #This 'Event' is for Cluster heartbeats
@@ -499,7 +572,7 @@ if __name__ == "__main__":
 
    event_engine = EventEngine()
    event_engine.start()
-   
+
    try:
       app = DS_Scheduler()
       app.run()
@@ -507,3 +580,6 @@ if __name__ == "__main__":
       Log("Shutting Down")
       event_engine.shutdown()
       #server.shutdown()
+
+if __name__ == "__main__":
+   main()
