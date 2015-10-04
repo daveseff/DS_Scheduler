@@ -224,6 +224,12 @@ class Util:
       return events
 
    def remote_command(self, job_id, host, cmd, user, job_name):
+      # Check if previous job is still markes as running. It may be faulty or stuck.
+      run_status = self.runQuery("select status, pid from jobs where id='%s'" % (job_id))[0]
+      if run_status == '99998':
+         # Previous job is still running. We should try to kill it. 
+         # TODO: Send an alert
+         cmd = 'kill -9 %s' % (run_status[1])
       unique_id = id_generator()
       if cmd.startswith('kill'):
          Log("Killing job %s on host %s" % (job_name, host))
