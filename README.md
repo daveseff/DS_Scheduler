@@ -10,10 +10,6 @@ for better monitoring and execution feedback. Graphing/Reporting: Visualize
 the running duration and timing of your jobs.
 
 
-Releases are alavilable in tar.bz2 format:
-
-<A href="https://solar1.net/files/scheduler-0.7tar.bz2">scheduler-0.7tar.bz2</a>
-
 <h1>Features:</h1>
 
  - Can be used as a drop-in replacement for cron.
