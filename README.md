@@ -100,7 +100,8 @@ Database:
 For those who want to contribute to the development, Here is an outline of the database:
 
 Table:  Jobs
-id            int(11)        AUTO_INCREMENT     unique job ID
+<table>
+<tr><td>id</td><td>int(11)</td><td>AUTO_INCREMENT     unique job ID</td></tr>
 name          varchar(255)   Human readable job name
 host          varchar(30)    Host that job will run on
 user          varchar(10)    user that job will run as
