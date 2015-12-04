@@ -48,5 +48,14 @@ logfile = '/var/log/DSscheduler.log'
 # with command_jobfail = "/path/to/script \'%s\' \'%s\'"
 #command_jobfail = "/path/to/script"
 
+# Email alerts
+sender_address = "ds-scheduler@example.com"
+smtp_server = "mail.example.com"
+
+# Does your smtp require authentication
+AUTHREQUIRED = True
+smtpuser = "smtpusername"
+smtppass = "serverpassword"
+
 ####################################################################
 ####################################################################

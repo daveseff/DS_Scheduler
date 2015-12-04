@@ -222,7 +222,7 @@ class Util:
          os.system('touch %s' % (conf.logfile))
 
    def init_DB(self):
-      current_db_version = 4
+      current_db_version = 5
       # Most useful on initial install, but should repair any damaged tables.
       #self.runQuery("")
       self.runQuery("CREATE TABLE IF NOT EXISTS dbversion ( id int(11) NOT NULL, db_version int(11) NOT NULL, PRIMARY KEY (id)) ENGINE=MyISAM DEFAULT CHARSET=latin1")
@@ -253,6 +253,11 @@ class Util:
             self.runQuery("ALTER TABLE jobs CHANGE user user VARCHAR( 31 ) CHARACTER SET latin1 COLLATE latin1_swedish_ci NOT NULL ")
             self.runQuery("UPDATE dbversion set db_version=4")
             db_version = 4
+         if db_version == 4:
+            Log("Updating database to version 5")
+            self.runQuery("ALTER TABLE jobs ADD aof INT(1) not NULL DEFAULT '0', email VARCHAR(80) NULL, kof INT(1) not NULL DEFAULT '1'")
+            self.runQuery("UPDATE dbversion set db_version=5")
+            db_version = 5
 
    def refresh_jobs(self):
       jobs = {}
@@ -270,9 +275,10 @@ class Util:
 
    def remote_command(self, job_id, host, cmd, user, job_name):
       # Check if previous job is still markes as running. It may be faulty or stuck.
-      run_status = self.runQuery("select status, pid from jobs where id='%s'" % (job_id))[0]
-      if run_status == '99998':
-         # Previous job is still running. We should try to kill it. 
+      run_status = self.runQuery("select status, pid, kof, from jobs where id='%s'" % (job_id))[0]
+      if run_status[0] == '99998' and run_status[2] == '1':
+         # Previous job is still running. We should try to kill it.
+         Log("Killing job %s, pid %s" % (job_id, run_status[1])
          # TODO: Send an alert
          cmd = 'kill -9 %s' % (run_status[1])
 
@@ -306,7 +312,12 @@ class Util:
          Log("Job %s Failed:" % (job_id))
          self.runQuery("update jobs set end_time=now(), rc=99994, status=99994 where id='%s'" % (job_id)) # Error
          self.runErrorCommand(job_name, 99994)
+         #TODO: Send email here
+         email_alert = self.runQuery("select eof, email from job where id='%s'" % (job_id))[0]
+         if email_alert[0] == '1':
+            self.sendEmail(email_alert[1], "Job %s Failed:")
          return None
+
       command = cPickle.dumps([cmd, user])
       ssl_socket.send(command)
       if cmd.startswith('ON_'):
@@ -385,6 +396,27 @@ class Util:
    def runErrorCommand(self, job_name, rc):
       if conf.command_jobfail:
          os.system(conf.command_jobfail % (job_name, rc)) # call error script
+
+   def sendEmail(self, address, msg):
+      FROM = conf.sender_address
+      TO = address
+      SUBJECT = "DS Scheduler Alert"
+
+      msg = MIMEMultipart('alternative')
+      msg['Subject'] = SUBJECT
+      msg['From'] = FROM
+      msg['To'] = TO
+      msg.attach(MIMEText(msg, 'html'))
+      # Send the mail
+
+      server = smtplib.SMTP(conf.smtp_server)
+      server.ehlo()
+      server.esmtp_features["auth"] = "LOGIN PLAIN"
+      if conf.AUTHREQUIRED == True:
+         server.login(conf.smtpuser, conf.smtppass)
+
+      server.sendmail(FROM, TO, msg.as_string())
+      server.quit()
 
 class DS_Scheduler:
    """ The main guts and logic for the scheduler."""
