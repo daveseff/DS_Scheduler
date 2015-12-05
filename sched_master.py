@@ -255,7 +255,7 @@ class Util:
             db_version = 4
          if db_version == 4:
             Log("Updating database to version 5")
-            self.runQuery("ALTER TABLE jobs ADD aof INT(1) not NULL DEFAULT '0', email VARCHAR(80) NULL, kof INT(1) not NULL DEFAULT '1'")
+            self.runQuery("ALTER TABLE jobs ADD aof INT(1) not NULL DEFAULT '0', ADD email VARCHAR(80) NULL, ADD kof INT(1) not NULL DEFAULT '1'")
             self.runQuery("UPDATE dbversion set db_version=5")
             db_version = 5
 
