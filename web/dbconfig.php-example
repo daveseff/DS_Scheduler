@@ -1,4 +1,8 @@
 <?php
+// Full URL for the scheduler
+$siteurl="https://www.example.com/scheduler/";
+
+// Database params
 $username="dbuser";
 $password="dbpassword";
 $database="ds-scheduler";
