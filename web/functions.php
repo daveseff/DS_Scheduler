@@ -11,7 +11,7 @@ include ( "jpgraph/src/jpgraph.php");
 include ("jpgraph/src/jpgraph_gantt.php");
 require_once $core . '/xajax.inc.php';
 
-$xajax = new xajax();
+$xajax = new xajax($siteurl);
 
 // Sqlite3
 //$db = new PDO('sqlite:../service_state.db');
