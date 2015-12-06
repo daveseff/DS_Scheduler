@@ -14,8 +14,12 @@ $cron = $_POST['cron'];
 $command = $_POST['cmd'];
 $comment = $_POST['comment'];
 
+$aof = (isset($_POST['aof'])?1:0);
+$kof = (isset($_POST['kof'])?1:0);
+$email = $_POST['email'];
+
 global $db;
-$query = "UPDATE  jobs SET name='{$name}', host='{$host}', user='{$user}', depends='{$depends}', depend_mode='{$depmode}', reoccur='{$cron}', command='{$command}', comment='{$comment}', update_flag=1 where id='{$id}'";
+$query = "UPDATE  jobs SET name='{$name}', host='{$host}', user='{$user}', depends='{$depends}', depend_mode='{$depmode}', reoccur='{$cron}', command='{$command}', comment='{$comment}', aof='{$aof}', kof='{$kof}', email='{$email}', update_flag=1 where id='{$id}'";
 $db->exec($query);
 Logit($query);
 echo "<meta http-equiv='refresh' content='0;URL=index.php'>";

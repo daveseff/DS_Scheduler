@@ -181,7 +181,7 @@ function viewJobs()
 
    foreach ($db->query("select * from jobs") as $jobs)
    {
-      $content .= "<div id=\"edit_dialog_{$jobs[id]}\" title=\"{$jobs[name]}\"></div>";
+      $content .= "<div id=\"edit_dialog_{$jobs[id]}\" title=\"{$jobs[name]}\"></div>\n";
    }
 
    return $content;
@@ -207,23 +207,20 @@ function editJobDialog()
          <tr>
             <td>Name <input name=\"name\" class=\"sminput\"></td>
             <td>Host <input name=\"host\" class=\"sminput\"></td>
-         </tr>
-         <tr>
             <td>User <input name=\"user\" class=\"sminput\"></td>
-            <td>Start Time <input name=\"start_time\" class=\"sminput\"></td>
          </tr>
          <tr>
+            <td>Start Time <input name=\"start_time\" class=\"sminput\"></td>
             <td>Fails After <input name=\"end_time\" class=\"sminput\"></td>
             <td>Depend_times <input name=\"depends\" class=\"sminput\"></td>
          </tr>
          <tr>
-            <td>Cron schedule <input name=\"cron\" class=\"sminput\"> </td>
-            <td>Command <input name=\"cmd\" class=\"sminput\"> </td>
+            <td>Cron schedule <input name=\"cron\" class=\"sminput\"></td>
+            <td>Command <input name=\"cmd\" class=\"sminput\"></td>
          </tr>
       </table>
    </form>
 </div>";
-
 return $content;
 }
 

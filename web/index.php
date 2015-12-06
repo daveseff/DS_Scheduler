@@ -30,7 +30,7 @@ $(function(){
    <?php echo dialogs_js(); ?>
 
    // Add service Dialog
-   $('#add_dialog').dialog({ autoOpen: false, width: 400, });
+   $('#add_dialog').dialog({ autoOpen: false, width: 666, });
    $('#add_job_link').click(function(){ $('#add_dialog').dialog('open'); return false; });
 
    // Chart Overlay
@@ -103,35 +103,42 @@ $(function(){
       <tr>
          <td>Name <input name="name" class="sminput"></td>
          <td>Host <input name="host" class="sminput"></td>
+         <td>User <input name="user" class="sminput"></td>
       </tr>
       <tr>
-         <td>User <input name="user" class="sminput"></td>
          <td>Type <select name="type" class="sminput">
             <option value="cron">Cron Notation</option>
             <option value="dep">Child Job</option>
             <option value="file">File Trigger</option>
          </td>
-      </tr>
-      <tr>
          <td>Fails After <input name="end" class="sminput"></td>
          <td>Depends <select name="depends" class="sminput">
            <option value="0">--</option>
          <?php echo getJobspulldown(0); ?>
                      </select>
          </td>
+      </tr>
+      <tr>
          <td>Mode <select name="depmode" class="sminput">
            <option value="0">--</option>
-         <?php echo getModepulldown(0); ?>
+           <?php echo getModepulldown(0); ?>
                      </select>
          </td>
       </tr>
       <tr>
-         <td>Cron schedule <input name="cron" class="sminput"> </td>
-         <td>Command <input name="cmd" class="sminput"> </td>
-         <td>Log retention (in days) <input name="log_ret" class="sminput" value="30"> </td>
+         <td>Cron schedule <input name="cron" class="sminput"></td>
+         <td>Command <input name="cmd" class="sminput"></td>
+         <td>Log retention (in days) <input name="log_ret" class="sminput" value="30"></td>
       </tr>
       <tr>
          <td colspan="2">Comment <textarea name="comment" ></textarea> </td>
+         <td colspan="2">Email on Failure<input type="checkbox" name="aof" ></input></td>
+         <td colspan="2">Kill on Failure<input type="checkbox" name="kof" ></input></td>
+      </tr>
+      <tr>
+         <td></td>
+         <td></td>
+         <td colspan="2">Email Address<input name="email" ></input></td>
       </tr>
       <tr>
          <td><button name="OK" type="submit">OK</button></td>
@@ -145,7 +152,7 @@ $(function(){
       </div>
       <div id="footer">
          <table width="100%">
-         <tr><td align="left"><?php $usr = $_SERVER['PHP_AUTH_USER']; echo "Hello " . $usr; ?></td><td align="right">DS Scheduler Web Console 0.8</td></tr>
+         <tr><td align="left"><?php $usr = $_SERVER['PHP_AUTH_USER']; echo "Hello " . $usr; ?></td><td align="right">DS Scheduler Web Console 0.9</td></tr>
          </table>
       </div>
    </div>
