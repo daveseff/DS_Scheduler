@@ -10,6 +10,8 @@ import logging
 import  datetime as dt
 from datetime import datetime, timedelta
 from apscheduler.scheduler import Scheduler
+import smtplib
+from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import MySQLdb
 import sched_config as conf
@@ -276,6 +278,7 @@ class Util:
    def remote_command(self, job_id, host, cmd, user, job_name):
       # Check if previous job is still markes as running. It may be faulty or stuck.
       run_status = self.runQuery("select status, pid, kof from jobs where id='%s'" % (job_id))[0]
+      email_alert = self.runQuery("select aof, email from jobs where id='%s'" % (job_id))[0]
       if run_status[0] == '99998' and run_status[2] == '1':
          # Previous job is still running. We should try to kill it.
          Log("Killing job %s, pid %s" % (job_id, run_status[1]))
@@ -302,7 +305,7 @@ class Util:
       if cmd.startswith('kill'):
          Log("Killing job %s on host %s" % (job_name, host))
       else:
-         Log("Running job %s on host %s" % (job_name, host))
+         Log("Running job %s on host %s" % (job_name, host,))
       client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
       ssl_socket = ssl.wrap_socket(client_socket, ca_certs=agent_certfile, cert_reqs=ssl.CERT_REQUIRED)
       try:
@@ -312,8 +315,6 @@ class Util:
          Log("Job %s Failed:" % (job_id))
          self.runQuery("update jobs set end_time=now(), rc=99994, status=99994 where id='%s'" % (job_id)) # Error
          self.runErrorCommand(job_name, 99994)
-         #TODO: Send email here
-         email_alert = self.runQuery("select eof, email from job where id='%s'" % (job_id))[0]
          if email_alert[0] == '1':
             self.sendEmail(email_alert[1], "Job %s Failed:")
          return None
@@ -348,8 +349,11 @@ class Util:
          Log("Job id %s returned with %s" % (job_id, rc))
          output=fix_quotes(data[1])
          if rc > 0:
-            Log("Run error command with parameters: %s %s" % (job_name, rc))
-            self.runErrorCommand(job_name, rc)
+            Log("Run error command with parameters: %s rc: %s email: %s" % (job_name, rc, email_alert[0]))
+            #self.runErrorCommand(job_name, rc)
+            if email_alert[0] == 1:
+               Log("Sending email to %s." % (email_alert[1]))
+               self.sendEmail(email_alert[1], "Job %s Failed with return code %s:" % (job_name, rc))
          if rc == 126:
             output = 'Command invoked cannot execute.'
          if rc == 127:
@@ -397,7 +401,7 @@ class Util:
       if conf.command_jobfail:
          os.system(conf.command_jobfail % (job_name, rc)) # call error script
 
-   def sendEmail(self, address, msg):
+   def sendEmail(self, address, text):
       FROM = conf.sender_address
       TO = address
       SUBJECT = "DS Scheduler Alert"
@@ -406,7 +410,7 @@ class Util:
       msg['Subject'] = SUBJECT
       msg['From'] = FROM
       msg['To'] = TO
-      msg.attach(MIMEText(msg, 'html'))
+      msg.attach(MIMEText(text, 'html'))
       # Send the mail
 
       server = smtplib.SMTP(conf.smtp_server)
