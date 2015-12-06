@@ -20,9 +20,9 @@ else
       <tr>
          <td>Name <input name="name" class="sminput" value="<?php echo $result['name']; ?>"></td>
          <td>Host <input name="host" class="sminput" value="<?php echo $result['host']; ?>"></td>
+         <td>User <input name="user" class="sminput" value="<?php echo $result['user']; ?>"></td>
       </tr>
       <tr>
-         <td>User <input name="user" class="sminput" value="<?php echo $result['user']; ?>"></td>
          <td>Type <select name="type" class="sminput">
             <option value="cron">Cron Notation</option>
             <option value="dep">Child Job</option>
@@ -49,8 +49,11 @@ else
       </tr>
       <tr>
          <td colspan="2">Comment <textarea name="comment"><?php echo $result['comment']; ?></textarea> </td>
+         <td colspan="2">Email on Failure<input type="checkbox" name="aof" <?php echo "checked",($result['aof'] == 1 ? '' : 'checked'); ?>></input></td>
+         <td colspan="2">Email <input name="email" value="<?php echo $result['email']; ?>"></td>
       </tr>
       <tr>
+         <td colspan="2">Kill on Failure<input type="checkbox" name="kof" <?php echo "checked",($result['kof'] == 1 ? '' : 'checked'); ?>></input></td>
          <td><button name="save" type="submit">Save</button></td>
       </tr>
    </table>
