@@ -1,0 +1,29 @@
+.outer a, .outer div, .outer li, .outer ul, .outer body{
+	margin: 0;
+	padding: 0;
+	font-family: Verdana, Helvetica, Arial, sans-serif;
+}
+div.menu{
+	width: 193px;
+}
+div.menu ul{
+	list-style: none;
+	text-indent: 0px;
+}
+div.menu li{
+	margin-top: 3px;
+}
+div.menu a{
+	font: 10px Verdana;
+	padding: 4px;
+	color: #323232;
+	display:block;
+	padding: 6px 30px;
+	height: 20px;
+	text-decoration: none;
+//	background: url('images/background.gif');
+}
+div.menu a:hover{
+	background: url('images/highlight.gif') no-repeat right;
+	padding: 6px 40px;
+}:148px;background:url(images/nav_active.jpg) no-repeat;color:#b18211;}

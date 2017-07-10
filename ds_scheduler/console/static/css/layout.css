@@ -1,0 +1,149 @@
+* { padding: 0; margin: 0; }
+
+body {
+ font-family: Verdana, Arial, Helvetica, sans-serif;
+ font-size: 10px;
+}
+#container
+{
+	margin: 0 auto;
+//	width: 900px;
+	background: #fff;
+}
+
+#header
+{
+	background: #ccc;
+	padding: 5px;
+}
+
+#header h1 { margin: 0; }
+
+#navigation
+{
+	float: left;
+//	width: 900px;
+	width: 100%;
+	background: #333;
+}
+
+#navigation ul
+{
+	margin: 0;
+	padding: 0;
+}
+
+#navigation ul li
+{
+	list-style-type: none;
+	display: inline;
+}
+
+#navigation li a
+{
+	display: block;
+	float: left;
+	padding: 5px 10px;
+//	color: #fff;
+	text-decoration: none;
+	border-right: 1px solid #fff;
+}
+
+#navigation li a:hover { background: #383; }
+
+#content-container
+{
+	float: left;
+//	width: 900px;
+	width: 100%;
+	background: #fff;
+//       overflow: auto;
+}
+
+#content
+{
+         font: 10px Verdana;
+	clear: left;
+	float: left;
+	width: 100%;
+	padding: 10px 0;
+	margin: 0 0 0 10px;
+	display: inline;
+}
+
+#content h2 { margin: 0; }
+
+#content td { white-space: nowrap; }
+#control
+{
+	float: right;
+	background: #eee;
+        border: solid;
+	width: 240px;
+	margin: 0 0 10px 0;
+	display: inline;
+}
+
+#aside h3 { margin: 0; }
+
+#footer
+{
+	clear: both;
+	background: #ccc;
+	text-align: right;
+	padding: 20px;
+	height: 1%;
+}
+
+.roweven {
+    background-color: lavender;
+}
+
+.rowodd {
+    background-color: whitesmoke;
+}
+
+.warning {
+    background-color: yellow;
+}
+
+.critical {
+    background-color: red;
+}
+
+
+.mathost {
+    -webkit-transform: rotate(-90deg);
+         -o-transform: rotate(-90deg);
+       -moz-transform: rotate(-90deg);
+               filter:  progid:DXImageTransform.Microsoft.BasicImage(rotation=3);  /* IE6,IE7 */
+           -ms-filter: "progid:DXImageTransform.Microsoft.BasicImage(rotation=3); /* IE8 */"
+//                width: 1px;
+         border-style: solid;
+//       padding-bottom: 30px;
+}
+
+.dettailview {
+                width: 100%;
+         border-style: none;
+}
+
+.dethost {
+           text-align: center;
+     background-color: lightblue;
+}
+
+.sminput {
+   background-color:#fff;
+   font-size: 9px;
+   border: 1px dashed #808080;
+   margin: 2px;
+}
+
+.smcomment {
+   background-color:#fff;
+   font-size: 9px;
+   border: 1px dashed #808080;
+   margin: 2px;
+}
+

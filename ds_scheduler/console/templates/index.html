@@ -1,0 +1,103 @@
+{% extends "common.html" %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div id="container">
+  <div id="header">
+    <table width="100%">
+    <tr>
+    <td>
+      <h4>DS Scheduler Web Console</h4>
+    </td>
+    <td>
+    </td>
+    </tr>
+    </table>
+  </div>
+  <div class="col-xs-12 col-md-3" id="navigation">
+    <button type="button" class="btn btn-default" data-toggle="modal" data-target="#add_dialog">Add Job</button>
+    <a href="#" id="chart_link" class="btn btn-default" >View Graph</a>
+    <div id="master_daemon_status"></div></li>
+  </div>
+
+  <div class="col-xs-12 col-md-12" id="content">
+    <form id="select_jobs" name="select_jobs" onsubmit="return false;">
+      <table class="table table-striped" >
+        <thead>
+          <tr><th></th><!-- <th>Job ID</th> --><th>Name</th><th>Host</th><th>Run As User</th><th>Last Start Time</th><th>Last End Time</th><th>Depends</th><th>Dependancy Mode</th><th>Reocurring</th><th>Last Run</th><th>Status</th><th>PID</th><th>Run Log</th></tr>
+        </thead>
+        <tbody>
+{% for job in jobs %}
+         <tr>
+           <td align="center"><input name="selected_job[]" value="{{ job.id }}" type="checkbox"></td>
+           <td><div><p><a href="#" id="edit_link_{{ job.id }}" class="ui-state-default ui-corner-all">{{ job.name }}</a></p></div></td>
+           <td><div id="host_{{ job.id }}">{{ job.host }}</div></td>
+           <td><div id="user_{{ job.id }}">{{ job.user }}</div></td>
+           <td><div id="start_time_{{ job.id }}"></div></td>
+           <td><div id="end_time_{{ job.id }}"></div></td>
+           <td><div id="depends_{{ job.id }}"></div></td>
+           <td><div id="dep_mode_{{ job.id }}"></div></td>
+           <td><div id="reoccur_{{ job.id }}"></div></td>
+           <td><div id="result_{{ job.id }}"></div></td>
+           <td><div id="status_{{ job.id }}"></div></td>
+           <td><div id="pid_{{ job.id }}"></div></td>
+           <td><a href="log?id={{ job.id }}">Log</a></td>
+         </tr>
+    {% endfor %}
+  </div>
+
+  <div class="col-xs-12 col-md-4" id="actions">
+    <input type="checkbox" onClick="toggle(this)" /> Select All ||
+    <i>With selected:</i>
+    <div class="btn-group btn-group-xs" role="group" aria-label="...">
+    <input class="btn btn-default" type="button" onclick="return xajax_Action(xajax.getFormValues('select_jobs'), 'run_now');" value="Run Now" />
+    <input class="btn btn-default" type="button" onclick="return xajax_Action(xajax.getFormValues('select_jobs'), 'kill');" value="Kill" />
+    <input class="btn btn-default" type="button" onclick="return xajax_Action(xajax.getFormValues('select_jobs'), 'remove');" value="Delete" />
+    <input class="btn btn-default" type="button" onclick="return xajax_Action(xajax.getFormValues('select_jobs'), 'disable');" value="Disable" />
+    <input class="btn btn-default" type="button" onclick="return xajax_Action(xajax.getFormValues('select_jobs'), 'enable');" value="Enable" />
+    <input class="btn btn-default" type="button" onclick="return xajax_Action(xajax.getFormValues('select_jobs'), 'reset');" value="Reset" />
+  </div>
+    </form>
+
+<!--
+<div id="chart_dialog" title="Last execution">
+   <script type="text/javascript">
+      document.getElementById('chart').src = "gantt.php?w=" + $(window).width();
+   </script>
+</div>
+-->
+<div class="modal fade" id="add_dialog" tabindex="-1" role="dialog" aria-labelledby="addDialog">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h4 class="modal-title">Add Job</h4>
+      </div>
+      <div class="modal-body">
+{% csrf_token %}
+{% crispy add_job %}
+      </div>
+<!--
+      <div class="modal-footer">
+        <div class="btn-group" role="group" aria-label="...">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+        <button type="submit" class="btn btn-primary">Submit</button>
+        </div>
+-->
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="footer">
+  <table width="100%">
+    <tr>
+      <td align="left">{% if current_user.is_authenticated %}
+        <p>Welcome, {{ current_user.get_username }}.</p>
+        {% else %}
+        <p>Welcome, please log in.</p>
+        {% endif %}
+      </td><td align="right">DS Scheduler Web Console 0.9</td></tr>
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,25 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+  <title>DS Scheduler Web Console</title>
+  <link rel="stylesheet" type="text/css" href="{% static "css/bootstrap.min.css" %}" />
+  <link rel="stylesheet" type="text/css" href="{% static "css/menu_style.css" %}" />
+
+  <script type="text/javascript" src="{% static "js/jquery.js" %}"></script>
+  <script type="text/javascript" src="{% static "js/bootstrap.min.js" %}"></script>
+  <script type="text/javascript" src="{% static "js/funcs.js" %}"></script>
+</head>
+<body>
+  <div id="content">
+    {% block content %}{% endblock %}
+  </div>
+
+  <!-- Overlay
+  <div class="overlay">
+    <div id="loading-img"><img src="{% static "images/loading_apple.gif" %}" width="100"></div>
+  </div>
+ -->
+</body>
+</html>

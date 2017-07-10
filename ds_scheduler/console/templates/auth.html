@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>DS Scheduler</title>
+    {% load staticfiles %}
+    <link type="text/css" rel="stylesheet" href="{% static 'js/jquery-ui.css' %}" />
+    <link type="text/css" rel="stylesheet" href="{% static 'css/layout.css' %}" />
+  </head>
+  <body>
+    <div id="header">
+           <table width="100%">
+           <tr>
+           <td>
+             <h1>
+                DS Scheduler
+             </h1>
+           </td>
+           <td>
+            </td>
+           </tr>
+           </table>
+   </div>
+   <div id="content">
+    {% block content %}
+    {% endblock %}
+   </div>
+  </body>
+</html>
