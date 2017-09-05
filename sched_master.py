@@ -513,7 +513,7 @@ class DS_Scheduler:
                   self.queue.pop(job_name)
                   self.util.remove_job(j_id)
                   Log("Unscheduled job %s" %(job_name))
-                  self.util.runQuery("update jobs set update_flag=0 where id='%s'" % (j_id))
+                  self.util.runQuery("delete from jobs where id='%s'" % (j_id))
                if j_update_flag == 3:
                   Log("Disabling Job: %s" % (job_name))
                   self.sched.unschedule_job(self.queue[job_name])

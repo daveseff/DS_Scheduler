@@ -264,7 +264,7 @@ function Action($aFormValues, $action)
          break;
       case 'reset':
          $db->exec("update jobs set update_flag=1, event_trigger=0, start_time=NULL, end_time=NULL, rc=99999 where id=${id}");
-         Logit("Ressing Job ${id}");
+         Logit("Resetting Job ${id}");
          break;
       }
    }

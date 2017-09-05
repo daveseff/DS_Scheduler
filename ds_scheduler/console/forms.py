@@ -57,7 +57,7 @@ class newJob(forms.ModelForm):
       Field('rc', type='hidden'),
       Field('event_trigger', type='hidden'),
       FormActions(
-            Submit('save_changes', 'Save changes'),
+            Submit('save_new_job', 'Save changes'),
       )
     )
     self.fields['depends'].choices = job_selection

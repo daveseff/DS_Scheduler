@@ -22,7 +22,7 @@
   </div>
 
   <div class="col-xs-12 col-md-12" id="content">
-    <form id="select_jobs" name="select_jobs" onsubmit="return false;">
+    <form id="select_jobs" method="post" action="/">
       <table class="table table-striped" >
         <thead>
           <tr><th></th><!-- <th>Job ID</th> --><th>Name</th><th>Host</th><th>Run As User</th><th>Last Start Time</th><th>Last End Time</th><th>Depends</th><th>Dependancy Mode</th><th>Reocurring</th><th>Last Run</th><th>Status</th><th>PID</th><th>Run Log</th></tr>
@@ -30,7 +30,7 @@
         <tbody>
 {% for job in jobs %}
          <tr>
-           <td align="center"><input name="selected_job[]" value="{{ job.id }}" type="checkbox"></td>
+           <td align="center"><input name="selected_job" value="{{ job.id }}" type="checkbox"></td>
            <td><div><p><a href="#" id="edit_link_{{ job.id }}" class="ui-state-default ui-corner-all">{{ job.name }}</a></p></div></td>
            <td><div id="host_{{ job.id }}">{{ job.host }}</div></td>
            <td><div id="user_{{ job.id }}">{{ job.user }}</div></td>
@@ -51,12 +51,12 @@
     <input type="checkbox" onClick="toggle(this)" /> Select All ||
     <i>With selected:</i>
     <div class="btn-group btn-group-xs" role="group" aria-label="...">
-    <input class="btn btn-default" type="button" onclick="return xajax_Action(xajax.getFormValues('select_jobs'), 'run_now');" value="Run Now" />
-    <input class="btn btn-default" type="button" onclick="return xajax_Action(xajax.getFormValues('select_jobs'), 'kill');" value="Kill" />
-    <input class="btn btn-default" type="button" onclick="return xajax_Action(xajax.getFormValues('select_jobs'), 'remove');" value="Delete" />
-    <input class="btn btn-default" type="button" onclick="return xajax_Action(xajax.getFormValues('select_jobs'), 'disable');" value="Disable" />
-    <input class="btn btn-default" type="button" onclick="return xajax_Action(xajax.getFormValues('select_jobs'), 'enable');" value="Enable" />
-    <input class="btn btn-default" type="button" onclick="return xajax_Action(xajax.getFormValues('select_jobs'), 'reset');" value="Reset" />
+    <input class="btn btn-default" type="submit" name="run_job_now" value="Run Now" />
+    <input class="btn btn-default" type="submit" name="kill_job"    value="Kill" />
+    <input class="btn btn-default" type="submit" name="delete_job"  value="Delete" />
+    <input class="btn btn-default" type="submit" name="disable_job" value="Disable" />
+    <input class="btn btn-default" type="submit" name="enable_job"  value="Enable" />
+    <input class="btn btn-default" type="submit" name="reset_job"   value="Reset" />
   </div>
     </form>
 

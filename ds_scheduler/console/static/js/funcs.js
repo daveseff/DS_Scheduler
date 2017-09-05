@@ -82,3 +82,5 @@ $(document)
   })
   //.ajaxStart(function () { $loading.show(); })
   //.ajaxStop(function () { $loading.hide(); });
+
+$("#btn_runNow").click(function(){ $.get("job_runnow", function(data, status){ }); });
