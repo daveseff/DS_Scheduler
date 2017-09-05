@@ -6,6 +6,7 @@
 <a href="." id="back_to_main" class="ui-state-default ui-corner-all">Back to Jobs</a>
 <br>
 <table class="table table-striped">
+<tr><th>Run Time</th><th>Output</th></tr>
 {% for result in results %}
 <tr><td>{{ result.end_date }}</td><td>{{ result.output }}</td></tr>
 {% endfor %}
